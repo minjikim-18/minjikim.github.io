@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Matthieu Zins</title>
+    <link>/</link>
+      <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
+    <description>Matthieu Zins</description>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Thu, 28 Jun 2018 00:00:00 +0100</lastBuildDate>
+    <image>
+      <url>/images/icon_hud447f41cd9e676e6dd869c25119b4fc4_1916_512x512_fill_lanczos_center_2.png</url>
+      <title>Matthieu Zins</title>
+      <link>/</link>
+    </image>
+    
+    <item>
+      <title>Contributions to the accuracy and robustness of visual localization in a world of objects</title>
+      <link>/publication/thesis/</link>
+      <pubDate>Fri, 09 Dec 2022 00:00:00 +0000</pubDate>
+      <guid>/publication/thesis/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>OA-SLAM: Leveraging Objects for Camera Relocalization in Visual SLAM</title>
+      <link>/publication/ismar/</link>
+      <pubDate>Tue, 16 Aug 2022 00:00:00 +0000</pubDate>
+      <guid>/publication/ismar/</guid>
+      <description>
+&lt;div style=&#34;position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;&#34;&gt;
+  &lt;iframe src=&#34;https://www.youtube.com/embed/L1HEL4kLJ3g&#34; style=&#34;position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;&#34; allowfullscreen title=&#34;YouTube Video&#34;&gt;&lt;/iframe&gt;
+&lt;/div&gt;
+
+</description>
+    </item>
+    
+    <item>
+      <title>Level Set-Based Camera Pose Estimation From Multiple 2D/3D Ellipse-Ellipsoid Correspondences</title>
+      <link>/publication/iros/</link>
+      <pubDate>Thu, 30 Jun 2022 00:00:00 +0000</pubDate>
+      <guid>/publication/iros/</guid>
+      <description>
+&lt;div style=&#34;position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;&#34;&gt;
+  &lt;iframe src=&#34;https://www.youtube.com/embed/p4aCW_Ox3Sg&#34; style=&#34;position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;&#34; allowfullscreen title=&#34;YouTube Video&#34;&gt;&lt;/iframe&gt;
+&lt;/div&gt;
+
+</description>
+    </item>
+    
+    <item>
+      <title>Object-Based Visual Camera Pose Estimation From Ellipsoidal Model and 3D-Aware Ellipse Prediction</title>
+      <link>/publication/ijcv/</link>
+      <pubDate>Tue, 01 Feb 2022 00:00:00 +0000</pubDate>
+      <guid>/publication/ijcv/</guid>
+      <description>
+&lt;div style=&#34;position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;&#34;&gt;
+  &lt;iframe src=&#34;https://www.youtube.com/embed/mGQ1tRELtlA&#34; style=&#34;position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;&#34; allowfullscreen title=&#34;YouTube Video&#34;&gt;&lt;/iframe&gt;
+&lt;/div&gt;
+
+</description>
+    </item>
+    
+    <item>
+      <title>My Article Name</title>
+      <link>/post/my-article-name/</link>
+      <pubDate>Sun, 13 Dec 2020 00:47:04 +0100</pubDate>
+      <guid>/post/my-article-name/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Circle Finder</title>
+      <link>/talk/circle-finder/</link>
+      <pubDate>Tue, 01 Dec 2020 00:00:00 +0000</pubDate>
+      <guid>/talk/circle-finder/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>3D-Aware Ellipse Prediction for Object-Based Camera Pose Estimation</title>
+      <link>/publication/3dv/</link>
+      <pubDate>Fri, 27 Nov 2020 00:00:00 +0000</pubDate>
+      <guid>/publication/3dv/</guid>
+      <description>
+&lt;div style=&#34;position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;&#34;&gt;
+  &lt;iframe src=&#34;https://www.youtube.com/embed/PhE4LzsqjAE&#34; style=&#34;position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;&#34; allowfullscreen title=&#34;YouTube Video&#34;&gt;&lt;/iframe&gt;
+&lt;/div&gt;
+
+</description>
+    </item>
+    
+    <item>
+      <title>Fault Detection in a 3D Seismic Volume</title>
+      <link>/talk/gfu00/</link>
+      <pubDate>Thu, 01 Oct 2020 00:00:00 +0000</pubDate>
+      <guid>/talk/gfu00/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Codebase Fixes and Performance Optimization</title>
+      <link>/talk/gfu03/</link>
+      <pubDate>Tue, 01 Sep 2020 00:00:00 +0000</pubDate>
+      <guid>/talk/gfu03/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>3D-Mesh to Polyline Sticks Conversion</title>
+      <link>/talk/gfu01/</link>
+      <pubDate>Sun, 16 Jun 2019 00:00:00 +0000</pubDate>
+      <guid>/talk/gfu01/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Calculation of Auxiliary Data for Geologic Fault Utilities</title>
+      <link>/talk/gfu02/</link>
+      <pubDate>Sun, 16 Jun 2019 00:00:00 +0000</pubDate>
+      <guid>/talk/gfu02/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Urban Semantic 3D Reconstruction From Multiview Satellite Imagery</title>
+      <link>/publication/core3d/</link>
+      <pubDate>Sun, 16 Jun 2019 00:00:00 +0000</pubDate>
+      <guid>/publication/core3d/</guid>
+      <description>
+&lt;div style=&#34;position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;&#34;&gt;
+  &lt;iframe src=&#34;https://player.vimeo.com/video/321528248&#34; style=&#34;position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;&#34; title=&#34;vimeo video&#34; webkitallowfullscreen mozallowfullscreen allowfullscreen&gt;&lt;/iframe&gt;
+ &lt;/div&gt;
+
+</description>
+    </item>
+    
+    <item>
+      <title>Terms</title>
+      <link>/terms/</link>
+      <pubDate>Thu, 28 Jun 2018 00:00:00 +0100</pubDate>
+      <guid>/terms/</guid>
+      <description>&lt;p&gt;Add your terms here and set &lt;code&gt;draft: false&lt;/code&gt; to publish it. Otherwise, delete this file if you don&amp;rsquo;t need it.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Color Fusion and Super-Resolution for Time-of-Flight Cameras</title>
+      <link>/publication/masterthesis/</link>
+      <pubDate>Mon, 16 Oct 2017 00:00:00 +0000</pubDate>
+      <guid>/publication/masterthesis/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Fault Detection in a 3D Seismic Volume (3rd place)</title>
+      <link>/accomplishment/fault_detection_in_a_3d_seismic_volume/fault_detection_in_a_3d_seismic_volume/</link>
+      <pubDate>Sat, 02 Sep 2017 00:00:00 +0000</pubDate>
+      <guid>/accomplishment/fault_detection_in_a_3d_seismic_volume/fault_detection_in_a_3d_seismic_volume/</guid>
+      <description>&lt;p&gt;The goal of this challenge was to detect and segment faults (curved surfaces) from seismic volume data.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Fault Detection in a 3D Seismic Volume (3rd place)</title>
+      <link>/project/fault_detection_in_a_3d_seismic_volume/fault_detection_in_a_3d_seismic_volume/</link>
+      <pubDate>Sat, 02 Sep 2017 00:00:00 +0000</pubDate>
+      <guid>/project/fault_detection_in_a_3d_seismic_volume/fault_detection_in_a_3d_seismic_volume/</guid>
+      <description>&lt;p&gt;&lt;b style=&#34;font-size:120%;color:#F08080&#34;&gt;3DV 2020&lt;/b&gt;
+The goal of this challenge was to detect and segment faults (curved surfaces) from seismic volume data.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title></title>
+      <link>/privacy/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>/privacy/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Résultats de localisation visuelle basée objet</title>
+      <link>/these/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>/these/</guid>
+      <description>&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://hal.archives-ouvertes.fr/tel-03922962/document&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Manuscript&lt;/a&gt; | &lt;a href=&#34;/files/Thesis_reports_examinators.pdf&#34;&gt;Examinators report&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Codes (Python and C++) released at &lt;a href=&#34;https://gitlab.inria.fr/tangram&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;gitlab.inria.fr/tangram&lt;/a&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;3DV_IJCV&#34;&gt;Chapitre 2 : Prédiction d&amp;rsquo;ellipse guidée par la 3D pour améliorer le calcul de pose&lt;/h3&gt;
+
+&lt;div style=&#34;position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;&#34;&gt;
+  &lt;iframe src=&#34;https://www.youtube.com/embed/mGQ1tRELtlA&#34; style=&#34;position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;&#34; allowfullscreen title=&#34;YouTube Video&#34;&gt;&lt;/iframe&gt;
+&lt;/div&gt;
+
+&lt;p&gt;&lt;br/&gt;&lt;br/&gt;&lt;br/&gt;&lt;br/&gt;&lt;/p&gt;
+&lt;h3 id=&#34;IROS&#34;&gt;Chapitre 3 : Raffinement de la pose de la caméra&lt;/h3&gt;
+
+&lt;div style=&#34;position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;&#34;&gt;
+  &lt;iframe src=&#34;https://www.youtube.com/embed/p4aCW_Ox3Sg&#34; style=&#34;position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;&#34; allowfullscreen title=&#34;YouTube Video&#34;&gt;&lt;/iframe&gt;
+&lt;/div&gt;
+
+&lt;p&gt;&lt;br/&gt;&lt;br/&gt;&lt;br/&gt;&lt;br/&gt;&lt;/p&gt;
+&lt;h3 id=&#34;ISMAR&#34;&gt;Chapitre 4 : OA-SLAM &lt;/h3&gt;
+&lt;p&gt;
+&lt;div style=&#34;position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;&#34;&gt;
+  &lt;iframe src=&#34;https://www.youtube.com/embed/L1HEL4kLJ3g&#34; style=&#34;position: absolute; top: 0; left: 0; width: 100%; height: 100%; border:0;&#34; allowfullscreen title=&#34;YouTube Video&#34;&gt;&lt;/iframe&gt;
+&lt;/div&gt;
+
+&lt;br/&gt;&lt;br/&gt;&lt;br/&gt;&lt;br/&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
