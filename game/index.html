@@ -1,0 +1,1416 @@
+<!doctype html>
+<html lang="en" data-site>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Single Beam</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="A small pixel game that introduces Minji Kim. Map a dark floor with a one-beam drone and recover six logs.">
+<meta name="theme-color" content="#07080b">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Silkscreen:wght@400;700&display=swap">
+<style>
+/* Layout: a one-screen field console. Status strip, scan viewport, one readout line, thumb controls. */
+:root {
+  --bg: #07080b;
+  --raised: #0e1015;
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.18);
+  --text: #eef0f2;
+  --body: #cfd4da;
+  --muted: #8b919b;
+  --accent: #5dcaa5;
+  --accent-ink: #06120e;
+  --coral: #f0997b;
+  --font-display: "Silkscreen", "Geist Mono", ui-monospace, Menlo, Consolas, monospace;
+  --font-body: "Geist", system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, "Apple SD Gothic Neo", "Noto Sans KR", monospace;
+  color-scheme: dark;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; }
+html { height: 100%; }
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.55 var(--font-body);
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  display: grid;
+  place-items: center;
+}
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; touch-action: manipulation; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+canvas:focus { outline: none; }
+
+/* ---------- console ---------- */
+.app {
+  width: 100%;
+  max-width: 560px;
+  height: 100%;
+  max-height: 900px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "hud hud" "stage stage" "readout readout" "dpad act";
+  gap: 10px 16px;
+  padding-block: 10px 14px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.hud { grid-area: hud; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.brand { margin: 0; font: 400 16px/1 var(--font-display); letter-spacing: 0.04em; white-space: nowrap; }
+.brand i, .logo i { font-style: normal; color: var(--accent); }
+.chips { display: flex; gap: 6px; }
+.chip {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--raised);
+  color: var(--body);
+  font: 400 12px/1 var(--font-display);
+  letter-spacing: 0.04em;
+}
+.chip[aria-pressed="false"] { color: var(--muted); text-decoration: line-through; }
+.chip--lang { font: 500 12px/1 var(--font-body); letter-spacing: 0; }
+
+.stage { grid-area: stage; position: relative; min-width: 0; min-height: 0; }
+.screen { position: absolute; outline: 1px solid var(--line-strong); background: var(--bg); }
+.screen canvas { display: block; image-rendering: pixelated; }
+.osd {
+  position: absolute;
+  padding: 8px;
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  text-shadow: 0 0 3px var(--bg), 0 0 6px var(--bg);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.osd b { font-weight: 500; color: var(--accent); }
+.osd--tl { left: 0; top: 0; }
+.osd--tr { right: 0; top: 0; }
+.osd--bl { left: 0; bottom: 0; }
+.osd--br { right: 0; bottom: 0; }
+.osd--br b { color: var(--coral); }
+
+.readout {
+  grid-area: readout;
+  margin: 0;
+  min-height: 2.9em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 400 12.5px/1.45 var(--font-mono);
+  color: var(--muted);
+}
+.readout::before { content: ">"; color: var(--accent); }
+
+.dpad {
+  grid-area: dpad;
+  justify-self: start;
+  width: 150px;
+  height: 150px;
+  display: grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  touch-action: none;
+}
+.dpad button, .dpad .hub { background: var(--raised); }
+.dpad button { border: 1px solid var(--line-strong); display: grid; place-items: center; color: var(--muted); touch-action: none; }
+.dpad svg { width: 16px; height: 16px; }
+.dpad .up { grid-area: 1 / 2; border-bottom: 0; }
+.dpad .left { grid-area: 2 / 1; border-right: 0; }
+.dpad .hub { grid-area: 2 / 2; }
+.dpad .right { grid-area: 2 / 3; border-left: 0; }
+.dpad .down { grid-area: 3 / 2; border-top: 0; }
+.dpad .left svg { transform: rotate(-90deg); }
+.dpad .right svg { transform: rotate(90deg); }
+.dpad .down svg { transform: rotate(180deg); }
+.dpad button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+.act { grid-area: act; justify-self: end; align-self: center; }
+.sweep {
+  width: 108px;
+  height: 108px;
+  display: grid;
+  place-content: center;
+  gap: 6px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: 400 16px/1 var(--font-display);
+  letter-spacing: 0.04em;
+  box-shadow: inset 0 -8px 0 rgba(0, 0, 0, 0.2);
+  touch-action: none;
+}
+.sweep small { font: 400 10px/1 var(--font-mono); letter-spacing: 0.08em; opacity: 0.7; display: none; text-align: center; }
+.sweep.on, .sweep:active { background: var(--text); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.2); transform: translateY(2px); }
+@media (hover: hover) and (pointer: fine) { .sweep small { display: block; } }
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .app {
+    max-width: none;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "hud hud hud" "dpad stage act" "dpad readout act";
+    gap: 6px 14px;
+    padding-block: 6px 8px;
+  }
+  .dpad { align-self: center; }
+  .readout { min-height: 1.5em; }
+}
+
+/* ---------- cards ---------- */
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  align-items: end;
+  justify-items: center;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  background: rgba(7, 8, 11, 0.72);
+}
+@media (min-width: 600px) and (min-height: 700px) { .sheet { align-items: center; } }
+.card {
+  width: 100%;
+  max-width: 528px;
+  max-height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px 20px 20px;
+  background: var(--raised);
+  border: 1px solid var(--line-strong);
+  -webkit-user-select: text;
+  user-select: text;
+  animation: rise 0.18s ease-out;
+}
+@keyframes rise { from { transform: translateY(12px); opacity: 0.5; } }
+@media (prefers-reduced-motion: reduce) { .card { animation: none; } }
+.card p, .card h1, .card h2, .card h3, .card dl, .card dd, .card ul { margin: 0; }
+.card p { color: var(--body); }
+.tag { font: 400 12px/1.3 var(--font-display); letter-spacing: 0.06em; color: var(--muted) !important; }
+.tag span { color: var(--coral); }
+.card h2 { font: 600 22px/1.2 var(--font-body); letter-spacing: -0.01em; text-wrap: balance; }
+.card .logo { font: 400 32px/1 var(--font-display); letter-spacing: 0.02em; }
+.card h3 { font: 600 16px/1.3 var(--font-body); }
+.meta { font: 400 12px/1.5 var(--font-mono); color: var(--muted) !important; }
+.rows { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 14px; }
+.rows dt { font: 400 12px/1.7 var(--font-mono); color: var(--accent); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rows dd { color: var(--body); min-width: 0; }
+.keys { list-style: none; padding: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; align-items: baseline; }
+.keys b { font: 400 12px/1.4 var(--font-display); letter-spacing: 0.04em; color: var(--accent); }
+.keys li { display: contents; }
+.keys span { color: var(--body); font-size: 14px; }
+.links { display: flex; flex-wrap: wrap; gap: 8px; }
+.links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  font: 500 13px/1 var(--font-body);
+  color: var(--text);
+  text-decoration: none;
+}
+.links a::after { content: "\2197"; margin-left: 6px; color: var(--accent); font-family: var(--font-mono); }
+.links a:hover { border-color: var(--accent); }
+.note { padding-top: 12px; border-top: 1px solid var(--line); font: 400 12.5px/1.55 var(--font-mono); color: var(--muted) !important; }
+.note b { display: block; margin-bottom: 4px; font: 400 12px/1.3 var(--font-display); letter-spacing: 0.06em; color: var(--accent); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+.btn {
+  min-height: 46px;
+  padding: 0 16px;
+  border: 1px solid var(--line-strong);
+  font: 400 12px/1 var(--font-display);
+  letter-spacing: 0.04em;
+  color: var(--text);
+  -webkit-user-select: none;
+  user-select: none;
+}
+.btn--ko { font: 600 14px/1 var(--font-body); letter-spacing: 0; }
+.btn--primary { flex: 1 1 auto; background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn--sm { min-height: 34px; padding: 0 10px; }
+.btn:hover { border-color: var(--accent); }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stats div { padding: 10px 12px; border: 1px solid var(--line); }
+.stats b { display: block; font: 500 20px/1.2 var(--font-mono); color: var(--text); font-variant-numeric: tabular-nums; }
+.stats span { font: 400 12px/1.4 var(--font-display); letter-spacing: 0.04em; color: var(--muted); }
+.plan { display: block; image-rendering: pixelated; outline: 1px solid var(--line); }
+.plan-wrap { display: grid; justify-items: center; }
+.email { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.email-text { font: 500 14px/1.4 var(--font-mono); color: var(--text); overflow-wrap: anywhere; min-width: 0; }
+.entry { display: flex; flex-direction: column; gap: 10px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.entry--locked { color: var(--muted); }
+.entry--locked .tag span { color: var(--muted); }
+.contact { display: flex; flex-direction: column; gap: 12px; }
+</style>
+</head>
+<body>
+<main class="app" id="app">
+  <header class="hud">
+    <h1 class="brand">SINGLE <i>BEAM</i></h1>
+    <div class="chips">
+      <button class="chip" id="btn-logbook" type="button">LOGS</button>
+      <button class="chip" id="btn-sound" type="button" aria-pressed="true" aria-label="Sound">SND</button>
+      <button class="chip chip--lang" id="btn-lang" type="button">한국어</button>
+    </div>
+  </header>
+
+  <div class="stage" id="stage">
+    <div class="screen" id="screen">
+      <canvas id="view" tabindex="-1" role="img" aria-label="Top-down view of a small drone mapping a dark floor"></canvas>
+      <div class="osd osd--tl">LOG <b id="osd-log">0/6</b></div>
+      <div class="osd osd--tr">MAP <b id="osd-map">0%</b></div>
+      <div class="osd osd--bl">RNG <b id="osd-rng">--</b></div>
+      <div class="osd osd--br">NEXT <b id="osd-next">--</b></div>
+    </div>
+  </div>
+
+  <p class="readout" id="readout" aria-live="polite"></p>
+
+  <div class="dpad" id="dpad" role="group" aria-label="Fly">
+    <button class="up" type="button" tabindex="-1" data-dir="3" aria-label="Up"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 2l5 7H1z" fill="currentColor"/></svg></button>
+    <button class="left" type="button" tabindex="-1" data-dir="2" aria-label="Left"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 2l5 7H1z" fill="currentColor"/></svg></button>
+    <span class="hub"></span>
+    <button class="right" type="button" tabindex="-1" data-dir="0" aria-label="Right"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 2l5 7H1z" fill="currentColor"/></svg></button>
+    <button class="down" type="button" tabindex="-1" data-dir="1" aria-label="Down"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 2l5 7H1z" fill="currentColor"/></svg></button>
+  </div>
+
+  <div class="act">
+    <button class="sweep" id="btn-sweep" type="button">SWEEP<small>SPACE</small></button>
+  </div>
+</main>
+
+<div class="sheet" id="sheet" hidden></div>
+
+<script>
+'use strict';
+
+/* ================================================================
+   Content. Everything the game says about Minji Kim lives here.
+   ================================================================ */
+const EMAIL = 'minji0110@gm.gist.ac.kr';
+// The site copy of this page sits at /game/ and can link to files next to it.
+const ON_SITE = document.documentElement.hasAttribute('data-site');
+
+const LOGS = [
+  {
+    kind: 'WHO',
+    title: { en: "Hi, I'm Minji Kim.", ko: '안녕하세요, 김민지입니다.' },
+    body: {
+      en: [
+        'I work on 3D computer vision and robotics. I help small robots work out where they are indoors when they carry very few sensors.',
+        'My interests are indoor localization in extreme environments, sensor calibration, and multi-modal data fusion.',
+      ],
+      ko: [
+        '3D 컴퓨터 비전과 로보틱스를 연구합니다. 센서가 몇 개 없는 작은 로봇이 실내에서 자기 위치를 알아내도록 하는 일입니다.',
+        '극한 환경에서의 실내 위치 추정, 센서 캘리브레이션, 멀티모달 데이터 융합에 관심이 있습니다.',
+      ],
+    },
+    note: {
+      en: "This floor is dark and the drone has a single range beam. That is close to the sensor budget in Minji Kim's research.",
+      ko: '이 층은 어둡고 드론에는 거리 센서 빔이 하나뿐입니다. 김민지의 연구가 다루는 센서 조건과 비슷합니다.',
+    },
+  },
+  {
+    kind: 'PAPER · IROS 2025',
+    title: { en: 'SPLiCE', ko: 'SPLiCE' },
+    body: {
+      en: [
+        'A calibration method between a single-point LiDAR and a camera. It uses an easy-to-build board that follows the Manhattan world.',
+        'It targets sensors light enough for a micro drone like the Crazyflie, where methods built for dense LiDAR fail.',
+      ],
+      ko: [
+        '단일 포인트 LiDAR와 카메라 사이의 캘리브레이션 방법입니다. 맨해튼 월드를 만족하는, 쉽게 만들 수 있는 보드를 사용합니다.',
+        'Crazyflie 같은 마이크로 드론에 실을 수 있는 가벼운 센서가 대상입니다. 조밀한 LiDAR를 전제로 한 기존 방법은 이런 센서에서 동작하지 않습니다.',
+      ],
+    },
+    meta: 'Minji Kim, Jeahn Han, Jungil Ham, Pyojin Kim',
+    links: [
+      { label: { en: 'Project page', ko: '프로젝트 페이지' }, href: 'https://splice-calib.github.io/' },
+      { label: { en: 'Paper (PDF)', ko: '논문 (PDF)' }, href: '../data/SPLiCE.pdf', site: true },
+    ],
+    note: {
+      en: 'The checkered floor in this room is a nod to the calibration board.',
+      ko: '이 방의 체크무늬 바닥은 캘리브레이션 보드에서 따왔습니다.',
+    },
+  },
+  {
+    kind: 'PAPER · RA-L 2025',
+    title: { en: 'SoMaSLAM', ko: 'SoMaSLAM' },
+    body: {
+      en: [
+        'A 2D graph SLAM for tiny drones with sparse range sensing.',
+        'It treats the Manhattan world as a soft constraint, so it keeps working in real buildings that do not follow the rule exactly.',
+      ],
+      ko: [
+        '거리 측정이 희소한 초소형 드론을 위한 2D 그래프 SLAM입니다.',
+        '맨해튼 월드 가정을 소프트 제약으로 넣어서, 규칙에 딱 맞지 않는 실제 건물에서도 동작합니다.',
+      ],
+    },
+    meta: 'Jeahn Han, Zichao Hu, Seonmo Yang, Minji Kim, Pyojin Kim',
+    links: [
+      { label: { en: 'Project page', ko: '프로젝트 페이지' }, href: 'https://somaslam.github.io/' },
+      { label: { en: 'Paper (PDF)', ko: '논문 (PDF)' }, href: '../data/SoMa.pdf', site: true },
+    ],
+    note: {
+      en: 'In this game, two beam hits on the same wall join into a line. It is a toy version of that idea.',
+      ko: '이 게임에서 같은 벽에 빔이 두 번 닿으면 선으로 이어지는 것은 그 아이디어를 아주 단순하게 옮긴 것입니다.',
+    },
+  },
+  {
+    kind: 'PAPER · RA-L 2024',
+    title: { en: 'San Francisco World', ko: 'San Francisco World' },
+    body: {
+      en: [
+        "A structural model for scenes with slopes, inspired by San Francisco's hills. It has one vertical, two horizontal, and four sloping dominant directions.",
+        'It powers a 3-DoF visual compass that tracks rotation from a single line and plane.',
+      ],
+      ko: [
+        '샌프란시스코의 언덕에서 착안한, 경사가 있는 장면을 위한 구조 모델입니다. 수직 1개, 수평 2개, 경사 4개의 지배 방향으로 이루어집니다.',
+        '이 모델을 이용해 선 하나와 평면 하나로 회전을 추적하는 3자유도 비주얼 컴퍼스를 만들었습니다.',
+      ],
+    },
+    meta: 'Jungil Ham, Minji Kim, Suyoung Kang, Kyungdon Joo, Haoang Li, Pyojin Kim',
+    links: [
+      { label: { en: 'Project page', ko: '프로젝트 페이지' }, href: 'https://sanfranciscoworld.github.io/' },
+      { label: { en: 'Paper (PDF)', ko: '논문 (PDF)' }, href: '../data/SFW.pdf', site: true },
+    ],
+    note: {
+      en: 'The striped ramp under this log is the only slope on the floor.',
+      ko: '이 로그가 놓인 줄무늬 경사로가 이 층의 유일한 경사입니다.',
+    },
+  },
+  {
+    kind: 'EXPERIENCE',
+    title: { en: 'Labs and awards', ko: '연구 경력과 수상' },
+    list: {
+      en: [
+        ['Mar – Jun 2025', 'NUS Temasek Laboratories, National University of Singapore'],
+        ['Oct 2022 – Feb 2024', "Machine Perception and Intelligence Lab, Sookmyung Women's University"],
+        ['2024', 'International Research Fellowship Scholarship, GIST'],
+        ['2023', "Capstone Design Grand Prize (1st place), Sookmyung Women's University"],
+      ],
+      ko: [
+        ['2025.03 – 2025.06', 'NUS Temasek Laboratories, 싱가포르국립대학교'],
+        ['2022.10 – 2024.02', 'Machine Perception and Intelligence Lab, 숙명여자대학교'],
+        ['2024', 'International Research Fellowship Scholarship, GIST'],
+        ['2023', 'Capstone Design Grand Prize (1위), 숙명여자대학교'],
+      ],
+    },
+    note: {
+      en: 'The coral blocks in this hall are free-standing pillars. The map labels them apart from walls.',
+      ko: '이 홀의 주황색 블록은 독립 기둥입니다. 지도에서 벽과 구분해 표시합니다.',
+    },
+  },
+  {
+    kind: 'EDUCATION',
+    title: { en: 'Education and tools', ko: '학력과 도구' },
+    list: {
+      en: [
+        ['M.S.', 'Mechanical and Robotics Engineering, Gwangju Institute of Science and Technology (GIST). MPIL, advised by Prof. Pyojin Kim.'],
+        ['B.S.', "Mechanical Engineering, Sookmyung Women's University."],
+        ['Code', 'Python, C++, MATLAB'],
+        ['Tools', 'ROS2, Docker'],
+        ['Languages', 'Korean (native), English (fluent)'],
+      ],
+      ko: [
+        ['석사', '기계로봇공학, 광주과학기술원(GIST). MPIL, 지도교수 Prof. Pyojin Kim.'],
+        ['학사', '기계공학, 숙명여자대학교.'],
+        ['코드', 'Python, C++, MATLAB'],
+        ['도구', 'ROS2, Docker'],
+        ['언어', '한국어(모국어), 영어(유창)'],
+      ],
+    },
+  },
+];
+
+const CONTACT_LINKS = [
+  { label: { en: 'Homepage', ko: '홈페이지' }, href: '../', site: true },
+  { label: { en: 'CV', ko: 'CV' }, href: '../data/minjikim_cv.pdf', site: true },
+  { label: { en: 'Portfolio (Korean)', ko: '포트폴리오' }, href: 'https://drive.google.com/file/d/1_FiuE45s4EeJcVoyoQXDVjDFskveAhDr/view?usp=drive_link' },
+  { label: { en: 'LinkedIn', ko: 'LinkedIn' }, href: 'https://www.linkedin.com/in/minji-kim-37230030a' },
+  { label: { en: 'GitHub', ko: 'GitHub' }, href: 'https://github.com/minjikim-18' },
+  { label: { en: 'Lab (MPIL)', ko: '연구실 (MPIL)' }, href: 'https://mpil-gist.github.io/' },
+];
+
+const UI = {
+  en: {
+    other: '한국어',
+    kicker: 'FIELD SURVEY · 6 LOGS',
+    premise: 'Lights are out on this floor, and your drone carries one range beam.',
+    goal: 'Sweep to map the walls. Recover six logs about Minji Kim.',
+    keysTouch: [['PAD', 'Fly'], ['SWEEP', 'Spin the beam once around']],
+    keysDesk: [['ARROWS / WASD', 'Fly'], ['SPACE', 'Spin the beam once around']],
+    start: 'Start survey', skip: 'Read the logs', cont: 'Continue', close: 'Close',
+    noteLabel: 'GAME NOTE',
+    logbook: 'Logbook', locked: 'Not recovered yet', revealAll: 'Show all logs',
+    who: 'Minji Kim · 3D computer vision and robotics',
+    doneTitle: 'Survey complete',
+    doneLead: 'All six logs recovered. This is the floor plan your beam built.',
+    statMap: 'MAPPED', statTime: 'TIME', statSweeps: 'SWEEPS',
+    contact: 'Open to research collaborations. Email is the best way to reach me.',
+    copy: 'Copy', copied: 'Copied', keep: 'Keep mapping', restart: 'Restart',
+    hStartTouch: 'Fly with the pad. SWEEP spins the beam once around.',
+    hStartKeys: 'Arrow keys or WASD to fly. Space spins the beam once around.',
+    hFirst: 'Walls appear where the beam lands. Two hits on one wall join into a line.',
+    hFollow: 'The coral arrow points to the next log.',
+    hFit: n => `Line fit: +${n} wall tile${n === 1 ? '' : 's'}`,
+    hBump: 'Contact. Wall marked.',
+    hLog: n => `Log ${n} of 6 recovered.`,
+    hAll: 'All logs recovered. Keep mapping to reach 100%.',
+    hFull: 'Floor fully mapped.',
+  },
+  ko: {
+    other: 'EN',
+    kicker: 'FIELD SURVEY · 6 LOGS',
+    premise: '이 층은 불이 꺼져 있고, 드론에 달린 건 거리 센서 빔 하나뿐입니다.',
+    goal: '스윕으로 벽을 매핑하면서 김민지에 대한 로그 6개를 찾아보세요.',
+    keysTouch: [['PAD', '비행'], ['SWEEP', '빔을 한 바퀴 돌리기']],
+    keysDesk: [['ARROWS / WASD', '비행'], ['SPACE', '빔을 한 바퀴 돌리기']],
+    start: '탐사 시작', skip: '로그만 읽기', cont: '계속', close: '닫기',
+    noteLabel: 'GAME NOTE',
+    logbook: '로그북', locked: '아직 찾지 못함', revealAll: '모든 로그 보기',
+    who: '김민지 · 3D 컴퓨터 비전 · 로보틱스',
+    doneTitle: '탐사 완료',
+    doneLead: '로그 6개를 모두 찾았습니다. 빔으로 그려낸 이 층의 평면도입니다.',
+    statMap: 'MAPPED', statTime: 'TIME', statSweeps: 'SWEEPS',
+    contact: '연구 협업은 언제든 환영합니다. 이메일로 연락 주세요.',
+    copy: '복사', copied: '복사됨', keep: '계속 매핑하기', restart: '처음부터',
+    hStartTouch: '패드로 비행하고, SWEEP으로 빔을 한 바퀴 돌려 보세요.',
+    hStartKeys: '방향키나 WASD로 비행하고, 스페이스로 빔을 한 바퀴 돌려 보세요.',
+    hFirst: '빔이 닿은 곳에 벽이 나타납니다. 같은 벽에 두 번 닿으면 선으로 이어집니다.',
+    hFollow: '주황색 화살표가 다음 로그 방향입니다.',
+    hFit: n => `직선 피팅: 벽 ${n}칸 추가`,
+    hBump: '접촉. 벽으로 표시했습니다.',
+    hLog: n => `로그 ${n}/6 회수.`,
+    hAll: '로그를 모두 찾았습니다. 100%까지 계속 매핑할 수 있습니다.',
+    hFull: '이 층의 매핑이 끝났습니다.',
+  },
+};
+
+/* ================================================================
+   Floor plan. # wall, P free-standing pillar, : checkered floor,
+   = ramp, S dock, 1-6 logs.
+   ================================================================ */
+const MAP = [
+  '###############################',
+  '#.......#:::::::::#...........#',
+  '#.......#:::::::::#..P.....P..#',
+  '#...S...#::::2::::#...........#',
+  '#.......#:::::::::#.....5.....#',
+  '#....1..#:::::::::#...........#',
+  '#.......#:::::::::#..P.....P..#',
+  '###.#########.##########.######',
+  '#.............................#',
+  '#.............................#',
+  '#####.#########.#########.#####',
+  '#.........#..........#........#',
+  '#..=====..#.########.#.##..##.#',
+  '#..==4==..#.#......#.#........#',
+  '#..=====..#.#..3...#.#.##..##.#',
+  '#.........#.#......#.#........#',
+  '#.........#.####.###.#.##..##.#',
+  '#.........#..........#...6....#',
+  '###############################',
+];
+
+const T = 14;            // base pixels per tile
+const TILE_M = 0.5;      // metres per tile, for the readouts
+const RANGE = 5;         // beam range in tiles (2.5 m)
+const SWEEP_PULSES = 16; // one pulse every 22.5 degrees
+const SWEEP_MS = 900;
+const STEP_MS = 140;
+const MAX_GAP = 4;       // longest gap a line fit may close
+const DX = [1, 0, -1, 0], DY = [0, 1, 0, -1]; // E S W N
+
+const W = MAP[0].length, H = MAP.length, N = W * H;
+const solid = new Uint8Array(N);      // 0 floor, 1 wall, 2 pillar
+const floorKind = new Uint8Array(N);  // 0 plain, 1 checkered, 2 ramp
+const logAt = new Int8Array(N).fill(-1);
+const exposed = new Uint8Array(N);    // wall with a floor tile on at least one side
+const START = { x: 1, y: 1 };
+let TOTAL_WALLS = 0;
+
+const idx = (x, y) => y * W + x;
+const inb = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
+const passable = (x, y) => inb(x, y) && !solid[idx(x, y)];
+
+(function parseMap() {
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const ch = MAP[y][x], i = idx(x, y);
+    if (ch === '#') solid[i] = 1;
+    else if (ch === 'P') solid[i] = 2;
+    else if (ch === ':') floorKind[i] = 1;
+    else if (ch === '=') floorKind[i] = 2;
+    else if (ch === 'S') { START.x = x; START.y = y; }
+    else if (ch >= '1' && ch <= '9') { logAt[i] = +ch - 1; floorKind[i] = floorKind[i - 1]; }
+    if (solid[i]) TOTAL_WALLS++;
+  }
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (!solid[idx(x, y)]) continue;
+    for (let d = 0; d < 4; d++) if (passable(x + DX[d], y + DY[d])) exposed[idx(x, y)] = 1;
+  }
+})();
+
+/* ================================================================
+   State
+   ================================================================ */
+const state = {
+  lang: 'en', sound: true, mode: 'sheet',
+  x: START.x, y: START.y, face: 1, px: START.x + 0.5, py: START.y + 0.5,
+  moving: false, fx: 0, fy: 0, tx: 0, ty: 0, moveT: 0,
+  sweeping: false, sweepT: 0, sweepBase: 0, sweepFired: 0, sweepQueued: false, sweepFit: 0,
+  heading: Math.PI / 2,
+  known: new Uint8Array(N), revealAt: new Float64Array(N), seen: new Uint8Array(N),
+  found: LOGS.map(() => false),
+  mapped: 0, sweeps: 0, playMs: 0, usedSweep: false, done: false, full: false,
+  rng: null, next: null, fwd: null, blocked: -1, shakeUntil: 0,
+};
+let points = [];   // recent beam returns, drawn as a fading point cloud
+let beams = [];    // sweep pulses still glowing
+const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const FINE = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+function store(key, val) {
+  try {
+    if (val === undefined) return localStorage.getItem('single-beam.' + key);
+    localStorage.setItem('single-beam.' + key, val);
+  } catch (e) { /* storage can be blocked; the game works without it */ }
+  return null;
+}
+
+/* ================================================================
+   Sensing: one ray, an occupancy grid, and a Manhattan line fit
+   ================================================================ */
+function see(x, y) {
+  if (!passable(x, y)) return;
+  state.seen[idx(x, y)] = 1;
+}
+// A beam has some width: tiles beside its path are seen too.
+function seeAround(x, y) {
+  see(x, y);
+  for (let d = 0; d < 4; d++) see(x + DX[d], y + DY[d]);
+}
+
+function castRay(ox, oy, ang) {
+  const dx = Math.cos(ang), dy = Math.sin(ang);
+  let mx = Math.floor(ox), my = Math.floor(oy);
+  const sx = dx > 0 ? 1 : -1, sy = dy > 0 ? 1 : -1;
+  const tdx = dx === 0 ? Infinity : Math.abs(1 / dx), tdy = dy === 0 ? Infinity : Math.abs(1 / dy);
+  let tmx = dx === 0 ? Infinity : (dx > 0 ? mx + 1 - ox : ox - mx) * tdx;
+  let tmy = dy === 0 ? Infinity : (dy > 0 ? my + 1 - oy : oy - my) * tdy;
+  for (;;) {
+    let t;
+    if (tmx < tmy) { t = tmx; tmx += tdx; mx += sx; } else { t = tmy; tmy += tdy; my += sy; }
+    if (t > RANGE || !inb(mx, my)) return { hit: false, dist: RANGE, x: ox + dx * RANGE, y: oy + dy * RANGE };
+    if (solid[idx(mx, my)]) return { hit: true, dist: t, x: ox + dx * t, y: oy + dy * t, tx: mx, ty: my };
+    seeAround(mx, my);
+  }
+}
+
+function reveal(x, y, at) {
+  const i = idx(x, y);
+  if (!solid[i] || state.known[i]) return false;
+  state.known[i] = 1;
+  state.revealAt[i] = at;
+  state.mapped++;
+  return true;
+}
+
+// Mark a measured wall tile, then infer what the Manhattan world implies:
+// two known tiles on one straight wall close the gap between them, and a
+// hidden corner appears once two of its neighbours are known.
+// Returns how many tiles were inferred rather than measured.
+function discover(x, y, now) {
+  if (!reveal(x, y, now)) return -1;
+  const queue = [[x, y]];
+  let inferred = 0;
+  while (queue.length) {
+    const [cx, cy] = queue.shift();
+    for (let d = 0; d < 4; d++) {
+      const gap = [];
+      let nx = cx + DX[d], ny = cy + DY[d];
+      while (inb(nx, ny) && solid[idx(nx, ny)] && !state.known[idx(nx, ny)] && gap.length <= MAX_GAP) {
+        gap.push([nx, ny]);
+        nx += DX[d]; ny += DY[d];
+      }
+      if (gap.length && gap.length <= MAX_GAP && inb(nx, ny) && state.known[idx(nx, ny)]) {
+        gap.forEach(([gx, gy], k) => { reveal(gx, gy, now + 70 + k * 45); inferred++; queue.push([gx, gy]); });
+      }
+    }
+    for (let d = 0; d < 4; d++) {
+      const nx = cx + DX[d], ny = cy + DY[d];
+      if (!inb(nx, ny)) continue;
+      const i = idx(nx, ny);
+      if (!solid[i] || state.known[i] || exposed[i]) continue;
+      let k = 0;
+      for (let e = 0; e < 4; e++) { const mx = nx + DX[e], my = ny + DY[e]; if (inb(mx, my) && state.known[idx(mx, my)]) k++; }
+      if (k >= 2) { reveal(nx, ny, now + 140); inferred++; queue.push([nx, ny]); }
+    }
+  }
+  return inferred;
+}
+
+function onReturn(r, now, quiet) {
+  const inferred = discover(r.tx, r.ty, now);
+  if (inferred < 0) return;
+  points.push({ x: r.x, y: r.y, t: now });
+  if (points.length > 500) points.shift();
+  if (!quiet) {
+    sfx.hit();
+    if (inferred > 0) {
+      if (state.sweeping) state.sweepFit += inferred;
+      else { sfx.fit(); hint(UI[state.lang].hFit(inferred)); }
+    }
+  }
+  if (!state.full && state.mapped === TOTAL_WALLS) {
+    state.full = true;
+    if (!quiet) { sfx.done(); hint(UI[state.lang].hFull, 6000); }
+  }
+  updateOsd();
+}
+
+// Shortest walk to the nearest unread log. The compass arrow aims a few
+// tiles down that path, so it leads through doors instead of at walls.
+function updateNext() {
+  state.next = null;
+  if (state.found.every(Boolean)) return;
+  const prev = new Int32Array(N).fill(-1);
+  const from = idx(state.x, state.y), queue = [from];
+  prev[from] = from;
+  let goal = -1;
+  for (let h = 0; h < queue.length; h++) {
+    const i = queue[h], li = logAt[i];
+    if (li >= 0 && !state.found[li]) { goal = i; break; }
+    const x = i % W, y = (i / W) | 0;
+    for (let d = 0; d < 4; d++) {
+      const nx = x + DX[d], ny = y + DY[d];
+      if (!passable(nx, ny)) continue;
+      const j = idx(nx, ny);
+      if (prev[j] < 0) { prev[j] = i; queue.push(j); }
+    }
+  }
+  if (goal < 0 || goal === from) return;
+  const path = [];
+  for (let i = goal; i !== from; i = prev[i]) path.push(i);
+  path.reverse();
+  const a = path[Math.min(3, path.length - 1)];
+  state.next = { steps: path.length, ax: (a % W) + 0.5, ay: ((a / W) | 0) + 0.5 };
+}
+
+/* ================================================================
+   Sound: a few square-wave blips, made on the spot
+   ================================================================ */
+let ac = null;
+function tone(freq, dur, type, vol, slide, delay) {
+  if (!state.sound) return;
+  try {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+    const t = ac.currentTime + (delay || 0);
+    const osc = ac.createOscillator(), gain = ac.createGain();
+    osc.type = type || 'square';
+    osc.frequency.setValueAtTime(freq, t);
+    if (slide) osc.frequency.exponentialRampToValueAtTime(Math.max(30, freq + slide), t + dur);
+    gain.gain.setValueAtTime(vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(gain).connect(ac.destination);
+    osc.start(t);
+    osc.stop(t + dur + 0.02);
+  } catch (e) { /* no audio available */ }
+}
+let lastHitSound = 0;
+const sfx = {
+  pulse: () => tone(1500, 0.025, 'square', 0.012),
+  hit: () => { const n = performance.now(); if (n - lastHitSound < 45) return; lastHitSound = n; tone(880, 0.05, 'triangle', 0.05); },
+  fit: () => { tone(660, 0.07, 'square', 0.03); tone(990, 0.1, 'square', 0.03, 0, 0.07); },
+  bump: () => tone(120, 0.1, 'square', 0.05, -60),
+  log: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.13, 'square', 0.04, 0, i * 0.08)),
+  done: () => [523, 784, 1047, 1319, 1568].forEach((f, i) => tone(f, 0.16, 'square', 0.04, 0, i * 0.1)),
+  ui: () => tone(700, 0.04, 'square', 0.02),
+};
+
+/* ================================================================
+   Input
+   ================================================================ */
+const KEY_DIR = { ArrowRight: 0, KeyD: 0, ArrowDown: 1, KeyS: 1, ArrowLeft: 2, KeyA: 2, ArrowUp: 3, KeyW: 3 };
+let keysDown = [];   // held direction keys, most recent last
+let padDir = -1;     // direction held on the touch pad
+let tapDir = -1;     // one queued step, so a quick tap is never lost
+let padPointer = null;
+
+const $ = id => document.getElementById(id);
+const dpad = $('dpad'), sweepBtn = $('btn-sweep'), sheet = $('sheet'), view = $('view');
+const padButtons = [...dpad.querySelectorAll('button')];
+
+function setPad(dir) {
+  if (dir === padDir) return;
+  padDir = dir;
+  if (dir >= 0) tapDir = dir;
+  padButtons.forEach(b => b.classList.toggle('on', +b.dataset.dir === dir));
+}
+function padFromPoint(e) {
+  const r = dpad.getBoundingClientRect();
+  const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+  if (Math.hypot(dx, dy) < r.width * 0.1) return setPad(-1);
+  setPad(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 0 : 2) : (dy > 0 ? 1 : 3));
+}
+dpad.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  padPointer = e.pointerId;
+  try { dpad.setPointerCapture(e.pointerId); } catch (err) { /* older browsers */ }
+  padFromPoint(e);
+});
+dpad.addEventListener('pointermove', e => { if (e.pointerId === padPointer) padFromPoint(e); });
+for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+  dpad.addEventListener(type, e => { if (e.pointerId === padPointer) { padPointer = null; setPad(-1); } });
+}
+dpad.addEventListener('contextmenu', e => e.preventDefault());
+
+function queueSweep() {
+  if (state.mode !== 'play' || state.sweeping) return;
+  state.sweepQueued = true;
+}
+sweepBtn.addEventListener('pointerdown', e => { e.preventDefault(); queueSweep(); });
+sweepBtn.addEventListener('click', e => { if (e.detail === 0) queueSweep(); });
+sweepBtn.addEventListener('contextmenu', e => e.preventDefault());
+
+function clearInput() {
+  keysDown = [];
+  tapDir = -1;
+  padPointer = null;
+  setPad(-1);
+  tapDir = -1;
+}
+window.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (state.mode === 'sheet') {
+    if (e.key === 'Escape') { e.preventDefault(); sheetEscape(); }
+    return;
+  }
+  if (e.code in KEY_DIR) {
+    e.preventDefault();
+    if (e.repeat) return;
+    const dir = KEY_DIR[e.code];
+    keysDown = keysDown.filter(k => k.code !== e.code);
+    keysDown.push({ code: e.code, dir });
+    tapDir = dir;
+  } else if (e.code === 'Space') {
+    e.preventDefault();
+    if (!e.repeat) queueSweep();
+  }
+});
+window.addEventListener('keyup', e => {
+  keysDown = keysDown.filter(k => k.code !== e.code);
+  if (e.code === 'Space' && state.mode === 'play') e.preventDefault();
+});
+window.addEventListener('blur', clearInput);
+document.addEventListener('visibilitychange', () => { if (document.hidden) clearInput(); });
+
+function wantDir() {
+  if (padDir >= 0) { tapDir = -1; return padDir; }
+  if (keysDown.length) { tapDir = -1; return keysDown[keysDown.length - 1].dir; }
+  if (tapDir >= 0) { const d = tapDir; tapDir = -1; return d; }
+  return -1;
+}
+
+/* ================================================================
+   Simulation
+   ================================================================ */
+function tryMove(dir, now, carry) {
+  state.face = dir;
+  state.heading = dir * Math.PI / 2;
+  const nx = state.x + DX[dir], ny = state.y + DY[dir];
+  if (passable(nx, ny)) {
+    state.blocked = -1;
+    state.moving = true;
+    state.fx = state.x; state.fy = state.y; state.tx = nx; state.ty = ny;
+    state.moveT = carry || 0;
+    return;
+  }
+  // One thud per push against a wall, not one per frame.
+  if (state.blocked === dir) return;
+  state.blocked = dir;
+  if (inb(nx, ny) && !state.known[idx(nx, ny)]) {
+    onReturn({ tx: nx, ty: ny, x: state.px + DX[dir] * 0.5, y: state.py + DY[dir] * 0.5 }, now);
+    hint(UI[state.lang].hBump);
+  }
+  sfx.bump();
+  if (!REDUCED) state.shakeUntil = now + 110;
+}
+
+function arrive() {
+  state.x = state.tx; state.y = state.ty;
+  state.px = state.x + 0.5; state.py = state.y + 0.5;
+  state.moving = false;
+  seeAround(state.x, state.y);
+  const li = logAt[idx(state.x, state.y)];
+  if (li >= 0 && !state.found[li]) {
+    state.found[li] = true;
+    sfx.log();
+    updateNext();
+    updateOsd();
+    showSheet('log', li);
+    return true;
+  }
+  updateNext();
+  return false;
+}
+
+function startSweep() {
+  state.sweepQueued = false;
+  state.sweeping = true;
+  state.sweepT = 0;
+  state.sweepFired = 0;
+  state.sweepFit = 0;
+  state.sweepBase = state.face * Math.PI / 2 + (Math.random() - 0.5) * (2 * Math.PI / SWEEP_PULSES);
+  state.sweeps++;
+  sweepBtn.classList.add('on');
+}
+
+function firePulse(ang, now, quiet) {
+  const r = castRay(state.px, state.py, ang);
+  if (!quiet) {
+    beams.push({ x0: state.px, y0: state.py, x1: r.x, y1: r.y, hit: r.hit, t: now });
+    sfx.pulse();
+  }
+  if (r.hit) onReturn(r, now, quiet);
+}
+
+function update(dt, now) {
+  // The forward beam is always on: it is the range finder.
+  if (!state.sweeping) {
+    const r = castRay(state.px, state.py, state.heading);
+    state.rng = r.hit ? r.dist : null;
+    state.fwd = r;
+    if (r.hit && !state.known[idx(r.tx, r.ty)]) onReturn(r, now, state.mode !== 'play');
+  }
+  if (state.mode !== 'play') return;
+  state.playMs += dt;
+
+  if (state.sweeping) {
+    state.sweepT += dt;
+    const due = Math.min(SWEEP_PULSES, Math.floor(state.sweepT / SWEEP_MS * SWEEP_PULSES) + 1);
+    while (state.sweepFired < due) {
+      firePulse(state.sweepBase + state.sweepFired * 2 * Math.PI / SWEEP_PULSES, now);
+      state.sweepFired++;
+    }
+    state.heading = state.sweepBase + Math.min(1, state.sweepT / SWEEP_MS) * 2 * Math.PI;
+    if (state.sweepT >= SWEEP_MS) {
+      state.sweeping = false;
+      state.heading = state.face * Math.PI / 2;
+      sweepBtn.classList.remove('on');
+      const u = UI[state.lang];
+      if (!state.usedSweep) { state.usedSweep = true; hint(u.hFirst, 6500); }
+      else if (state.sweepFit > 0 && !state.full) hint(u.hFit(state.sweepFit));
+      if (state.sweepFit > 0) sfx.fit();
+    }
+    return;
+  }
+
+  let carry = 0;
+  if (state.moving) {
+    state.moveT += dt / STEP_MS;
+    if (state.moveT < 1) {
+      state.px = state.fx + (state.tx - state.fx) * state.moveT + 0.5;
+      state.py = state.fy + (state.ty - state.fy) * state.moveT + 0.5;
+      return;
+    }
+    carry = Math.min(0.9, state.moveT - 1);
+    if (arrive()) return;
+  }
+  if (state.sweepQueued) return startSweep();
+  const dir = wantDir();
+  if (dir >= 0) tryMove(dir, now, carry);
+  else state.blocked = -1;
+}
+
+/* ================================================================
+   Drawing. Everything is painted on a small buffer and scaled up
+   by a whole number of device pixels, so pixels stay square.
+   ================================================================ */
+const C = {
+  bg: '#07080b', floor: '#10141a', floorAlt: '#171c24', floorDot: '#242c37', ramp: '#1d2530',
+  wallFill: '#0f2420', wallSpeck: '#1d463c', pilFill: '#2b1a14', pilSpeck: '#5a3426',
+  accent: '#5dcaa5', coral: '#f0997b', flash: '#d9fff1', beam: '#8fe6cb', point: '#c9f7e8',
+  body: '#d7dde3', bodyDark: '#6b7480', prop: '#3d4651', blade: '#a4adb8', dock: '#39424d', read: '#2f6f5c',
+};
+const buf = document.createElement('canvas');
+const bctx = buf.getContext('2d');
+const vctx = view.getContext('2d');
+const stage = $('stage'), screenEl = $('screen');
+
+function fit() {
+  const r = stage.getBoundingClientRect();
+  if (r.width < 20 || r.height < 20) return;
+  const dpr = window.devicePixelRatio || 1;
+  let s = Math.max(1, Math.round(2 * dpr));
+  const tiles = (len, scale) => Math.floor(len * dpr / (T * scale));
+  while (s > 1 && (tiles(r.width, s) < 9 || tiles(r.height, s) < 8)) s--;
+  const cols = Math.max(5, Math.min(19, tiles(r.width, s)));
+  const rows = Math.max(5, Math.min(17, tiles(r.height, s)));
+  buf.width = cols * T; buf.height = rows * T;
+  view.width = buf.width * s; view.height = buf.height * s;
+  const cw = view.width / dpr, ch = view.height / dpr;
+  view.style.width = screenEl.style.width = cw + 'px';
+  view.style.height = screenEl.style.height = ch + 'px';
+  screenEl.style.left = Math.round((r.width - cw) / 2 * dpr) / dpr + 'px';
+  screenEl.style.top = Math.round((r.height - ch) / 2 * dpr) / dpr + 'px';
+  vctx.imageSmoothingEnabled = false;
+}
+
+function pixelLine(g, x0, y0, x1, y1, every) {
+  let dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1, dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1, err = dx + dy, k = 0;
+  for (;;) {
+    if (k % every === 0) g.fillRect(x0, y0, 1, 1);
+    if (x0 === x1 && y0 === y1) break;
+    const e2 = 2 * err;
+    if (e2 >= dy) { err += dy; x0 += sx; }
+    if (e2 <= dx) { err += dx; y0 += sy; }
+    k++;
+  }
+}
+
+function drawFloor(g, tx, ty, sx, sy, i) {
+  const kind = floorKind[i];
+  g.fillStyle = kind === 1 && ((tx + ty) & 1) ? C.floorAlt : C.floor;
+  g.fillRect(sx, sy, T, T);
+  if (kind === 0) { g.fillStyle = C.floorDot; g.fillRect(sx, sy, 1, 1); }
+  else if (kind === 1) { g.fillStyle = C.floorDot; g.fillRect(sx + 6, sy + 6, 2, 2); }
+  else { g.fillStyle = C.ramp; for (let k = 1; k < T; k += 4) g.fillRect(sx, sy + k, T, 2); }
+}
+
+function drawWall(g, tx, ty, sx, sy, i, age) {
+  const pillar = solid[i] === 2;
+  if (age < 180) { g.fillStyle = C.flash; g.fillRect(sx, sy, T, T); return; }
+  g.fillStyle = pillar ? C.pilFill : C.wallFill;
+  g.fillRect(sx, sy, T, T);
+  g.fillStyle = pillar ? C.pilSpeck : C.wallSpeck;
+  g.fillRect(sx + 3, sy + 4, 1, 1); g.fillRect(sx + 9, sy + 8, 1, 1); g.fillRect(sx + 6, sy + 11, 1, 1);
+  g.fillStyle = pillar ? C.coral : C.accent;
+  if (passable(tx, ty - 1)) g.fillRect(sx, sy, T, 2);
+  if (passable(tx, ty + 1)) g.fillRect(sx, sy + T - 2, T, 2);
+  if (passable(tx - 1, ty)) g.fillRect(sx, sy, 2, T);
+  if (passable(tx + 1, ty)) g.fillRect(sx + T - 2, sy, 2, T);
+}
+
+function drawLog(g, cx, cy, read, now) {
+  if (read) {
+    g.fillStyle = C.read; g.fillRect(cx - 2, cy - 2, 5, 5);
+    g.fillStyle = C.accent; g.fillRect(cx, cy, 1, 1);
+    return;
+  }
+  g.fillStyle = C.coral;
+  for (let d = -3; d <= 3; d++) { const w = 3 - Math.abs(d); g.fillRect(cx - w, cy + d, 1, 1); g.fillRect(cx + w, cy + d, 1, 1); }
+  g.fillRect(cx, cy, 1, 1);
+  if (REDUCED) return;
+  const phase = (now / 900) % 1, rad = 4 + phase * 7;
+  g.globalAlpha = 0.7 * (1 - phase);
+  for (let a = 0; a < 16; a++) {
+    const t = a / 16 * Math.PI * 2;
+    g.fillRect(Math.round(cx + Math.cos(t) * rad), Math.round(cy + Math.sin(t) * rad), 1, 1);
+  }
+  g.globalAlpha = 1;
+}
+
+function drawDrone(g, cx, cy, heading, now) {
+  const spin = Math.floor(now / 50) % 2;
+  for (const [ox, oy] of [[-4, -4], [4, -4], [-4, 4], [4, 4]]) {
+    const x = cx + ox, y = cy + oy;
+    g.fillStyle = C.prop;
+    g.fillRect(x - 1, y - 2, 3, 1); g.fillRect(x - 1, y + 2, 3, 1);
+    g.fillRect(x - 2, y - 1, 1, 3); g.fillRect(x + 2, y - 1, 1, 3);
+    g.fillStyle = C.blade;
+    if (spin) g.fillRect(x - 1, y, 3, 1); else g.fillRect(x, y - 1, 1, 3);
+    g.fillStyle = C.bodyDark;
+    const ax = Math.sign(ox), ay = Math.sign(oy);
+    g.fillRect(cx + ax * 2, cy + ay * 2, 1, 1); g.fillRect(cx + ax * 3, cy + ay * 3, 1, 1);
+  }
+  g.fillStyle = C.body;
+  g.fillRect(cx - 1, cy - 1, 3, 3);
+  g.fillStyle = C.accent;
+  g.fillRect(cx + Math.round(Math.cos(heading) * 2), cy + Math.round(Math.sin(heading) * 2), 1, 1);
+}
+
+function draw(now) {
+  const g = bctx, vw = buf.width, vh = buf.height;
+  g.globalAlpha = 1;
+  g.fillStyle = C.bg;
+  g.fillRect(0, 0, vw, vh);
+  let camX = Math.round(state.px * T - vw / 2), camY = Math.round(state.py * T - vh / 2);
+  if (now < state.shakeUntil) { camX += Math.random() < 0.5 ? -1 : 1; camY += Math.random() < 0.5 ? -1 : 1; }
+  const x0 = Math.max(0, Math.floor(camX / T)), x1 = Math.min(W - 1, Math.floor((camX + vw - 1) / T));
+  const y0 = Math.max(0, Math.floor(camY / T)), y1 = Math.min(H - 1, Math.floor((camY + vh - 1) / T));
+
+  for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
+    const i = idx(tx, ty), sx = tx * T - camX, sy = ty * T - camY;
+    if (solid[i]) {
+      if (state.known[i] && now >= state.revealAt[i]) drawWall(g, tx, ty, sx, sy, i, now - state.revealAt[i]);
+    } else if (state.seen[i]) {
+      drawFloor(g, tx, ty, sx, sy, i);
+      const cx = sx + (T >> 1), cy = sy + (T >> 1);
+      if (tx === START.x && ty === START.y) {
+        g.fillStyle = C.dock;
+        for (const [ox, oy] of [[-5, -5], [5, -5], [-5, 5], [5, 5]]) {
+          g.fillRect(cx + ox, cy + oy, 1, 1); g.fillRect(cx + ox - Math.sign(ox), cy + oy, 1, 1); g.fillRect(cx + ox, cy + oy - Math.sign(oy), 1, 1);
+        }
+      }
+      if (logAt[i] >= 0) drawLog(g, cx, cy, state.found[logAt[i]], now);
+    }
+  }
+
+  // Point cloud: recent returns fade into the map.
+  g.fillStyle = C.point;
+  points = points.filter(p => now - p.t < 7000);
+  for (const p of points) {
+    const age = now - p.t, size = age < 260 ? 2 : 1;
+    g.globalAlpha = Math.max(0.15, 1 - age / 7000);
+    g.fillRect(Math.round(p.x * T) - camX - (size >> 1), Math.round(p.y * T) - camY - (size >> 1), size, size);
+  }
+
+  const cx = Math.round(state.px * T) - camX, cy = Math.round(state.py * T) - camY;
+  g.fillStyle = C.beam;
+  beams = beams.filter(b => now - b.t < 200);
+  for (const b of beams) {
+    g.globalAlpha = 1 - (now - b.t) / 200;
+    pixelLine(g, Math.round(b.x0 * T) - camX, Math.round(b.y0 * T) - camY, Math.round(b.x1 * T) - camX, Math.round(b.y1 * T) - camY, 1);
+  }
+  if (!state.sweeping && state.fwd) {
+    g.globalAlpha = 0.55;
+    pixelLine(g, cx, cy, Math.round(state.fwd.x * T) - camX, Math.round(state.fwd.y * T) - camY, 2);
+    if (state.fwd.hit) { g.globalAlpha = 1; g.fillStyle = C.point; g.fillRect(Math.round(state.fwd.x * T) - camX - 1, Math.round(state.fwd.y * T) - camY - 1, 2, 2); }
+  }
+  g.globalAlpha = 1;
+
+  drawDrone(g, cx, cy, state.heading, now);
+
+  // Compass arrow toward the next log.
+  if (state.next && state.next.steps > 1) {
+    const a = Math.atan2(state.next.ay - state.py, state.next.ax - state.px);
+    const ca = Math.cos(a), sa = Math.sin(a);
+    g.fillStyle = C.coral;
+    if (REDUCED || Math.floor(now / 400) % 4 !== 3) {
+      for (let r = 15, half = 0; r >= 12; r--, half++) for (let w = -half; w <= half; w++) {
+        g.fillRect(Math.round(cx + ca * r - sa * w), Math.round(cy + sa * r + ca * w), 1, 1);
+      }
+    }
+  }
+
+  vctx.drawImage(buf, 0, 0, view.width, view.height);
+}
+
+/* ================================================================
+   Readouts
+   ================================================================ */
+const osdLog = $('osd-log'), osdMap = $('osd-map'), osdRng = $('osd-rng'), osdNext = $('osd-next'), readout = $('readout');
+const metres = tiles => (tiles * TILE_M).toFixed(1) + ' m';
+const mapPercent = () => state.mapped === TOTAL_WALLS ? 100 : Math.min(99, Math.floor(state.mapped / TOTAL_WALLS * 100));
+function setText(el, text) { if (el.textContent !== text) el.textContent = text; }
+function updateOsd() {
+  setText(osdLog, state.found.filter(Boolean).length + '/' + LOGS.length);
+  setText(osdMap, mapPercent() + '%');
+  setText(osdNext, state.next ? metres(state.next.steps) : '--');
+}
+function updateRange() { setText(osdRng, state.rng == null ? '--' : metres(state.rng)); }
+
+let hintUntil = 0;
+function baseHint() {
+  const u = UI[state.lang];
+  if (state.full) return u.hFull;
+  if (state.found.every(Boolean)) return u.hAll;
+  if (!state.usedSweep) return FINE ? u.hStartKeys : u.hStartTouch;
+  return u.hFollow;
+}
+function hint(text, ms) {
+  setText(readout, text);
+  hintUntil = performance.now() + (ms || 3200);
+}
+
+/* ================================================================
+   Cards
+   ================================================================ */
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const pad2 = n => String(n).padStart(2, '0');
+const btnClass = () => state.lang === 'ko' ? 'btn btn--ko' : 'btn';
+
+function linksHTML(links) {
+  const shown = (links || []).filter(l => ON_SITE || !l.site);
+  if (!shown.length) return '';
+  return '<div class="links">' + shown.map(l => {
+    const ext = /^https?:/.test(l.href);
+    return `<a href="${esc(l.href)}"${ext ? ' target="_blank" rel="noopener"' : ''}>${esc(l.label[state.lang])}</a>`;
+  }).join('') + '</div>';
+}
+function logHTML(i) {
+  const L = LOGS[i], l = state.lang;
+  return `<p class="tag"><span>LOG ${pad2(i + 1)}</span> · ${esc(L.kind)}</p>
+    <h2>${esc(L.title[l])}</h2>
+    ${L.body ? L.body[l].map(p => `<p>${esc(p)}</p>`).join('') : ''}
+    ${L.list ? '<dl class="rows">' + L.list[l].map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('') + '</dl>' : ''}
+    ${L.meta ? `<p class="meta">${esc(L.meta)}</p>` : ''}
+    ${linksHTML(L.links)}
+    ${L.note ? `<p class="note"><b>${UI[l].noteLabel}</b>${esc(L.note[l])}</p>` : ''}`;
+}
+function contactHTML() {
+  const u = UI[state.lang];
+  return `<div class="contact">
+    <h3>${esc(u.who)}</h3>
+    <p>${esc(u.contact)}</p>
+    <div class="email"><span class="email-text">${EMAIL}</span><button class="${btnClass()} btn--sm" type="button" data-act="copy">${esc(u.copy)}</button></div>
+    ${linksHTML(CONTACT_LINKS)}
+  </div>`;
+}
+function clock(ms) { const s = Math.floor(ms / 1000); return Math.floor(s / 60) + ':' + pad2(s % 60); }
+
+const SHEETS = {
+  title() {
+    const u = UI[state.lang];
+    return `<p class="tag"><span>${u.kicker}</span></p>
+      <h2 class="logo">SINGLE <i>BEAM</i></h2>
+      <p>${esc(u.premise)}</p>
+      <p>${esc(u.goal)}</p>
+      <ul class="keys">${(FINE ? u.keysDesk : u.keysTouch).map(([k, v]) => `<li><b>${k}</b><span>${esc(v)}</span></li>`).join('')}</ul>
+      <div class="actions">
+        <button class="${btnClass()} btn--primary" type="button" data-act="start" data-autofocus>${esc(u.start)}</button>
+        <button class="${btnClass()}" type="button" data-act="skip">${esc(u.skip)}</button>
+        <button class="btn btn--ko" type="button" data-act="lang">${esc(u.other)}</button>
+      </div>`;
+  },
+  log(i) {
+    return logHTML(i) + `<div class="actions"><button class="${btnClass()} btn--primary" type="button" data-act="close" data-autofocus>${esc(UI[state.lang].cont)}</button></div>`;
+  },
+  final() {
+    const u = UI[state.lang];
+    return `<p class="tag"><span>${pad2(LOGS.length)}/${pad2(LOGS.length)}</span> · LOGS</p>
+      <h2>${esc(u.doneTitle)}</h2>
+      <p>${esc(u.doneLead)}</p>
+      <div class="plan-wrap"><canvas class="plan" role="img" aria-label="Floor plan"></canvas></div>
+      <div class="stats">
+        <div><b>${mapPercent()}%</b><span>${u.statMap}</span></div>
+        <div><b>${clock(state.playMs)}</b><span>${u.statTime}</span></div>
+        <div><b>${state.sweeps}</b><span>${u.statSweeps}</span></div>
+      </div>
+      ${contactHTML()}
+      <div class="actions">
+        <button class="${btnClass()} btn--primary" type="button" data-act="close" data-autofocus>${esc(u.keep)}</button>
+        <button class="${btnClass()}" type="button" data-act="restart">${esc(u.restart)}</button>
+      </div>`;
+  },
+  logbook(opts) {
+    const u = UI[state.lang], all = opts && opts.all;
+    const entries = LOGS.map((L, i) => state.found[i] || all
+      ? `<section class="entry">${logHTML(i)}</section>`
+      : `<section class="entry entry--locked"><p class="tag"><span>LOG ${pad2(i + 1)}</span> · ${esc(L.kind)}</p><p>${esc(u.locked)}</p></section>`).join('');
+    const locked = !all && state.found.some(f => !f);
+    return `<p class="tag"><span>${state.found.filter(Boolean).length}/${LOGS.length}</span> · LOGS</p>
+      <h2>${esc(u.logbook)}</h2>
+      ${entries}
+      ${contactHTML()}
+      <div class="actions">
+        <button class="${btnClass()} btn--primary" type="button" data-act="close" data-autofocus>${esc(u.close)}</button>
+        ${locked ? `<button class="${btnClass()}" type="button" data-act="reveal">${esc(u.revealAll)}</button>` : ''}
+      </div>`;
+  },
+};
+
+let current = null;     // { kind, arg, back }
+function showSheet(kind, arg, back) {
+  current = { kind, arg, back: back || null };
+  state.mode = 'sheet';
+  clearInput();
+  renderSheet(true);
+}
+function renderSheet(fresh) {
+  if (!current) return;
+  const keepScroll = fresh ? 0 : (sheet.firstElementChild ? sheet.firstElementChild.scrollTop : 0);
+  sheet.innerHTML = `<div class="card" role="dialog" aria-modal="true">${SHEETS[current.kind](current.arg)}</div>`;
+  sheet.hidden = false;
+  const card = sheet.firstElementChild;
+  if (!fresh) { card.style.animation = 'none'; card.scrollTop = keepScroll; }
+  const plan = card.querySelector('.plan');
+  if (plan) drawPlan(plan);
+  const focus = card.querySelector('[data-autofocus]');
+  if (focus && fresh) focus.focus({ preventScroll: true });
+}
+function closeSheet() {
+  const was = current;
+  if (was && was.back) return showSheet(was.back);
+  current = null;
+  sheet.hidden = true;
+  sheet.innerHTML = '';
+  state.mode = 'play';
+  view.focus({ preventScroll: true });
+  const u = UI[state.lang];
+  if (was && was.kind === 'log') {
+    hint(u.hLog(state.found.filter(Boolean).length));
+    if (state.found.every(Boolean) && !state.done) { state.done = true; sfx.done(); showSheet('final'); }
+  }
+}
+function sheetEscape() {
+  if (!current) return;
+  if (current.kind === 'title') return sheetAct('start');
+  closeSheet();
+}
+function sheetAct(act, btn) {
+  if (act === 'start') { sfx.ui(); current = null; closeSheet(); hint(baseHint(), 6000); }
+  else if (act === 'skip') showSheet('logbook', { all: true }, 'title');
+  else if (act === 'close') { sfx.ui(); closeSheet(); }
+  else if (act === 'reveal') { current.arg = { all: true }; renderSheet(false); }
+  else if (act === 'lang') setLang(state.lang === 'en' ? 'ko' : 'en');
+  else if (act === 'restart') { reset(); current = null; closeSheet(); hint(baseHint(), 6000); }
+  else if (act === 'copy') copyEmail(btn);
+}
+sheet.addEventListener('click', e => {
+  const btn = e.target.closest('[data-act]');
+  if (btn) sheetAct(btn.dataset.act, btn);
+});
+
+function copyEmail(btn) {
+  const done = () => { btn.textContent = UI[state.lang].copied; };
+  const select = () => {
+    const el = sheet.querySelector('.email-text');
+    if (!el) return;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  };
+  try { navigator.clipboard.writeText(EMAIL).then(done, select); } catch (e) { select(); }
+}
+
+function drawPlan(cv) {
+  const dpr = window.devicePixelRatio || 1;
+  const avail = cv.parentElement.clientWidth || 300;
+  const k = Math.max(2, Math.floor(avail * dpr / W));
+  cv.width = W * k; cv.height = H * k;
+  cv.style.width = cv.width / dpr + 'px';
+  cv.style.height = cv.height / dpr + 'px';
+  const g = cv.getContext('2d');
+  g.fillStyle = C.bg;
+  g.fillRect(0, 0, cv.width, cv.height);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = idx(x, y);
+    if (solid[i]) { if (!state.known[i]) continue; g.fillStyle = solid[i] === 2 ? C.coral : C.accent; }
+    else if (state.seen[i]) g.fillStyle = logAt[i] >= 0 && state.found[logAt[i]] ? C.point : C.floorAlt;
+    else continue;
+    g.fillRect(x * k, y * k, k, k);
+  }
+}
+
+/* ================================================================
+   Language, sound, HUD buttons
+   ================================================================ */
+function setLang(lang) {
+  state.lang = lang;
+  store('lang', lang);
+  document.documentElement.lang = lang;
+  $('btn-lang').textContent = UI[lang].other;
+  if (current) renderSheet(false);
+  setText(readout, baseHint());
+  hintUntil = 0;
+}
+function setSound(on) {
+  state.sound = on;
+  store('sound', on ? '1' : '0');
+  $('btn-sound').setAttribute('aria-pressed', String(on));
+}
+function chip(id, fn) {
+  $(id).addEventListener('click', e => { fn(); if (e.detail > 0) e.currentTarget.blur(); });
+}
+chip('btn-lang', () => setLang(state.lang === 'en' ? 'ko' : 'en'));
+chip('btn-sound', () => { setSound(!state.sound); sfx.ui(); });
+chip('btn-logbook', () => { if (state.mode === 'play') showSheet('logbook'); });
+
+/* ================================================================
+   Boot, reset, live-update snapshot
+   ================================================================ */
+function reset() {
+  Object.assign(state, {
+    x: START.x, y: START.y, face: 1, px: START.x + 0.5, py: START.y + 0.5, heading: Math.PI / 2,
+    moving: false, sweeping: false, sweepQueued: false, sweepFit: 0,
+    mapped: 0, sweeps: 0, playMs: 0, usedSweep: false, done: false, full: false,
+    rng: null, next: null, fwd: null, blocked: -1, shakeUntil: 0,
+  });
+  state.known.fill(0); state.revealAt.fill(0); state.seen.fill(0);
+  state.found = LOGS.map(() => false);
+  points = []; beams = [];
+  sweepBtn.classList.remove('on');
+  // One silent sweep, so the first frame already shows a room taking shape.
+  seeAround(state.x, state.y);
+  for (let k = 0; k < SWEEP_PULSES; k++) firePulse(k * 2 * Math.PI / SWEEP_PULSES + 0.2, 0, true);
+  updateNext();
+  updateOsd();
+}
+
+const bits = a => Array.from(a).join('');
+function snapshot() {
+  return {
+    v: 1, lang: state.lang, sound: state.sound, x: state.x, y: state.y, face: state.face,
+    known: bits(state.known), seen: bits(state.seen), found: state.found.slice(),
+    sweeps: state.sweeps, playMs: state.playMs, usedSweep: state.usedSweep, done: state.done,
+    playing: state.mode === 'play',
+  };
+}
+function restore(saved) {
+  if (!saved || saved.v !== 1 || saved.known.length !== N) return false;
+  for (let i = 0; i < N; i++) { state.known[i] = +saved.known[i]; state.seen[i] = +saved.seen[i]; }
+  state.mapped = state.known.reduce((a, b) => a + b, 0);
+  state.revealAt.fill(0);
+  Object.assign(state, {
+    x: saved.x, y: saved.y, face: saved.face, px: saved.x + 0.5, py: saved.y + 0.5, heading: saved.face * Math.PI / 2,
+    found: saved.found.slice(), sweeps: saved.sweeps, playMs: saved.playMs, usedSweep: saved.usedSweep, done: saved.done,
+    full: state.mapped === TOTAL_WALLS,
+  });
+  points = [];
+  updateNext();
+  updateOsd();
+  return !!saved.playing;
+}
+
+let lastFrame = 0;
+function frame(now) {
+  const dt = Math.min(50, lastFrame ? now - lastFrame : 16);
+  lastFrame = now;
+  update(dt, now);
+  updateRange();
+  if (hintUntil && now > hintUntil && state.mode === 'play') { hintUntil = 0; setText(readout, baseHint()); }
+  draw(now);
+  requestAnimationFrame(frame);
+}
+
+function start(saved) {
+  const lang = (saved && saved.lang) || store('lang') || ((navigator.language || 'en').toLowerCase().startsWith('ko') ? 'ko' : 'en');
+  const sound = saved && 'sound' in saved ? saved.sound : store('sound') !== '0';
+  reset();
+  const resume = restore(saved);
+  setSound(sound);
+  setLang(lang);
+  fit();
+  if (window.ResizeObserver) new ResizeObserver(fit).observe(stage);
+  window.addEventListener('resize', fit);
+  if (resume) { state.mode = 'play'; setText(readout, baseHint()); }
+  else showSheet('title');
+  requestAnimationFrame(frame);
+}
+
+// Inside the Claude artifact viewer, keep progress across live updates.
+const hot = window.claude && window.claude.hot;
+try { if (hot && hot.snapshot) hot.snapshot(snapshot); } catch (e) { /* not in a viewer */ }
+if (hot && hot.ready) hot.ready(start); else start((hot && hot.data) || {});
+</script>
+</body>
+</html>
